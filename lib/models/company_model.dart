@@ -13,7 +13,7 @@ class Company {
   String? siret;
   String? domain;
   String? logo;
-  int? stepLevs;
+  double? stepLevs;
   List<Challenge> challenges;
 
   Company.dataFromJson(Map<String, dynamic> json)
@@ -29,7 +29,7 @@ class Company {
         siret = json['siret'] ?? "",
         domain = json['domain'] ?? "",
         logo = json['logo'] ?? "",
-        stepLevs = json['step_levs'] ?? 0,
+        stepLevs = double.tryParse(json['step_levs'].toString()) ?? 0.0,
         challenges = (json['challenges'] != null)
             ? List.generate(
                 (json["challenges"] as List).length,

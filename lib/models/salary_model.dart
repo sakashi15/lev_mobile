@@ -1,3 +1,4 @@
+import 'package:lev_mobile/models/calculation_slot_model.dart';
 import 'package:lev_mobile/models/company_model.dart';
 import 'package:lev_mobile/models/walked_step.dart';
 
@@ -14,6 +15,7 @@ class Salary {
   int? walkingSteps;
   String? lastWalkedStepsDate;
   List<WalkedStep>? walkedSteps;
+  List<CalculationSlot>? calculationSlots;
   List<int>? completedChallenges;
 
   Salary.init(
@@ -58,6 +60,14 @@ class Salary {
             (json["walked_steps"] as List).length,
                 (index) => WalkedStep.dataFromJson(
                 (json["walked_steps"] as List)[index]
+            )
+        )
+            : [],
+        calculationSlots = (json['company'] != null && json['company']['calculation_slots'] != null)
+            ? List.generate(
+            (json['company']['calculation_slots'] as List).length,
+                (index) => CalculationSlot.dataFromJson(
+                (json['company']['calculation_slots'] as List)[index]
             )
         )
             : [],

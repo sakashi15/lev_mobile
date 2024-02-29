@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:health/health.dart';
 import 'package:iconly/iconly.dart';
 import 'package:lev_mobile/constants.dart';
+import 'package:lev_mobile/models/calculation_slot_model.dart';
 import 'package:lev_mobile/models/salary_model.dart';
 import 'package:lev_mobile/models/walked_step.dart';
 import 'package:lev_mobile/network/my_http_client.dart';
@@ -50,23 +51,55 @@ class _HomeState extends State<Home> {
     int? steps;
     int? steps2;
 
-    // define the types to get
     var types = [HealthDataType.STEPS,];
 
-    // get steps for today (i.e., since midnight)
     final now = DateTime.now();
     final midnight = DateTime(now.year, now.month, now.day);
-    final lastDate = DateTime.parse((result as Salary).lastWalkedStepsDate.toString());
-
+    DateTime lastDate = DateTime.tryParse((result as Salary).lastWalkedStepsDate.toString()) ?? DateTime.now();
+    lastDate = lastDate.add(Duration(days: 1));
     var permissions = [HealthDataAccess.READ,];
 
     bool requested = await health.requestAuthorization(types, permissions: permissions);
 
     if (requested) {
       try {
-        // get the number of steps for today
-        steps = await health.getTotalStepsInInterval(midnight, now);
-        steps2 = await health.getTotalStepsInInterval(lastDate, now);
+
+
+        int totalSteps = 0;
+        int todayTotalSteps = 0;
+        DateTime today = DateTime.now();
+        for (DateTime date = lastDate; date.isBefore(today.add(Duration(days: 1))); date = date.add(Duration(days: 1))) {
+          String weekday = rankToDay(date.weekday - 1);
+          if(result.runtimeType == Salary && (result as Salary).calculationSlots != null) {
+            List<CalculationSlot> slots = (result as Salary).calculationSlots!.where((element) => element.weekday == weekday).toList();
+
+            if(slots.isNotEmpty) {
+              for(CalculationSlot slot in slots) {
+                DateTime start = DateTime.tryParse(date.toString().substring(0, 10) + " " + slot.startTime) ?? DateTime.now();
+                DateTime end = DateTime.tryParse(date.toString().substring(0, 10) + " " + slot.endTime) ?? DateTime.now();
+                int slotSteps = await health.getTotalStepsInInterval(start, end) ?? 0;
+                totalSteps = totalSteps + slotSteps;
+                if(date.compareTo(today) == 1) {
+                  todayTotalSteps = todayTotalSteps + slotSteps;
+                }
+
+
+                print(date.toString().substring(0, 10) + " " + slot.startTime);
+                print(date.toString().substring(0, 10) + " " + slot.endTime);
+                print("rank: " + weekday);
+                print("date: " + date.toString());
+                print("slots: " + slots.toString());
+                print("steps: " + slotSteps.toString());
+                print("today: " + date.compareTo(today).toString());
+                print("---------------------------------");
+              }
+            }
+          }
+        }
+        steps2 = totalSteps;
+        steps = todayTotalSteps;
+
+
       } catch (error) {
         print("Caught exception in getTotalStepsInInterval: $error");
       }
@@ -80,6 +113,26 @@ class _HomeState extends State<Home> {
     } else {
       print("Authorization not granted - error in authorization");
     }
+  }
+
+  String rankToDay(rank) {
+    switch(rank) {
+      case 0:
+        return "monday";
+      case 1:
+        return "tuesday";
+      case 2:
+        return "wednesday";
+      case 3:
+        return "thursday";
+      case 4:
+        return "friday";
+      case 5:
+        return "saturday";
+      case 6:
+        return "sunday";
+    }
+    return "sunday";
   }
 
   void getSalary() async {
@@ -99,7 +152,9 @@ class _HomeState extends State<Home> {
             maxStep = walkedStep.steps;
           }
         }
+        print("------");
         print(lastStepsDates);
+        print("------");
         print(lastStepsValues);
       }
       setState(() {
